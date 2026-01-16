@@ -3,7 +3,7 @@ from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, Con
 import openai, os
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
-BOT_TOKEN = os.getenv(8405956493:AAFiUZKG1GG6NoQCm68zDkBqK4X6O5QDpuw)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 FREE_LIMIT = 20
 users = {}
@@ -26,47 +26,62 @@ Short, deep, tension-filled replies, never explicit.
 """
 
 def get_prompt(level):
-    return {"free": LUNA_FREE, "premium": LUNA_PREMIUM, "intense": LUNA_INTENSE}.get(level, LUNA_FREE)
+    return {
+        "free": LUNA_FREE,
+        "premium": LUNA_PREMIUM,
+        "intense": LUNA_INTENSE
+    }.get(level, LUNA_FREE)
 
 def chat(prompt, text):
     r = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[
-            {"role":"system","content":GLOBAL_PROMPT},
-            {"role":"system","content":prompt},
-            {"role":"user","content":text}
+            {"role": "system", "content": GLOBAL_PROMPT},
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": text}
         ]
     )
     return r.choices[0].message.content
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    users[update.effective_user.id] = {"count":0,"level":"free"}
-    await update.message.reply_text("Hi… I’m Luna 💖\nHow has your day been?")
+    users[update.effective_user.id] = {"count": 0, "level": "free"}
+    await update.message.reply_text(
+        "Hi… I’m Luna 💖\nHow has your day been?"
+    )
 
 async def premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Choose:\n💖 ROMANTIC\n🔥 INTENSE")
+    await update.message.reply_text(
+        "Choose:\n💖 ROMANTIC\n🔥 INTENSE"
+    )
 
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    u = users.setdefault(update.effective_user.id, {"count":0,"level":"free"})
-    t = update.message.text.lower()
+    user = users.setdefault(
+        update.effective_user.id,
+        {"count": 0, "level": "free"}
+    )
+    text = update.message.text.lower()
 
-    if t == "romantic":
-        u["level"] = "premium"
+    if text == "romantic":
+        user["level"] = "premium"
         await update.message.reply_text("Romantic Premium activated 💖")
         return
-    if t == "intense":
-        u["level"] = "intense"
+
+    if text == "intense":
+        user["level"] = "intense"
         await update.message.reply_text("Intense mode activated 🔥")
         return
 
-    if u["level"]=="free" and u["count"]>=FREE_LIMIT:
+    if user["level"] == "free" and user["count"] >= FREE_LIMIT:
         await update.message.reply_text(
-            "I’d love to continue…\n💖 Premium 5€\n🔥 Intense 10€\nType /premium"
+            "I’d love to continue…\n"
+            "💖 Premium 5€\n"
+            "🔥 Intense 10€\n"
+            "Type /premium"
         )
         return
 
-    reply = chat(get_prompt(u["level"]), update.message.text)
-    u["count"] += 1
+    reply = chat(get_prompt(user["level"]), update.message.text)
+    user["count"] += 1
     await update.message.reply_text(reply)
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
